@@ -1,0 +1,292 @@
+{
+  "kpi_sets": [
+    {
+      "kpi_set_id": "revenue_kpis",
+      "kpi_set_name": "Revenue KPIs",
+      "description": "Covers total sales, order count, revenue by period, refunds, discounts, and tax. Use when the user asks about sales performance, revenue trends, order volumes, or financial summaries.",
+      "kpis": [
+        { "name": "Total Revenue", "description": "Sum of all order totals in the period." },
+        { "name": "Order Count", "description": "Total number of orders placed." },
+        { "name": "Average Order Value", "description": "Average monetary value per order." },
+        { "name": "Total Tax Collected", "description": "Sum of tax amounts across all orders." },
+        { "name": "Total Discounts Applied", "description": "Sum of all coupon/discount deductions." },
+        { "name": "Refund Amount", "description": "Total value of refunded orders." }
+      ],
+      "parameters": [
+        { "name": "start_date", "type": "date", "required": true, "description": "Start of the reporting period." },
+        { "name": "end_date", "type": "date", "required": true, "description": "End of the reporting period." }
+      ],
+      "base_query": "SELECT o.orderId, o.userId, o.orderDate, o.orderTotal, o.orderStatus, o.taxAmount, o.shippingAmount, o.discountAmount, o.currencyCode, u.firstName, u.lastName, u.email, u.userType, c.code AS couponCode, c.discountAmount AS couponDiscount FROM Orders o LEFT JOIN Users u ON o.userId = u.userId LEFT JOIN OrderCoupons oc ON o.orderId = oc.orderId LEFT JOIN CouponsV2 c ON oc.couponId = c.CouponId WHERE o.orderDate BETWEEN :start_date AND :end_date",
+      "table_context": {
+        "Orders": {
+          "table_comment": "Core orders table. Each row represents one customer order. Join to Users on userId for customer info.",
+          "columns": {
+            "orderId": "Unique identifier for each order. Primary key.",
+            "userId": "The user who placed this order. Foreign key to Users.userId.",
+            "orderDate": "Date and time the order was placed. Use for all date-range filters.",
+            "orderTotal": "Total monetary value of the order in the transaction currency.",
+            "orderStatus": "Current status of the order (e.g. complete, pending, refunded).",
+            "taxAmount": "Tax charged on this order.",
+            "shippingAmount": "Shipping fee charged on this order.",
+            "discountAmount": "Total discount deducted from this order.",
+            "currencyCode": "ISO currency code for this order (e.g. USD, EUR)."
+          }
+        },
+        "Users": {
+          "table_comment": "All registered users including customers, affiliates, and associates. Join to Orders on userId.",
+          "columns": {
+            "userId": "Unique user identifier. Primary key.",
+            "firstName": "User's first name.",
+            "lastName": "User's last name.",
+            "email": "User's email address.",
+            "userType": "Type of user: customer, affiliate, or associate."
+          }
+        },
+        "OrderCoupons": {
+          "table_comment": "Maps coupons applied to orders. Join to Orders on orderId and to CouponsV2 on couponId.",
+          "columns": {
+            "orderId": "Foreign key to Orders.orderId.",
+            "couponId": "Foreign key to CouponsV2.CouponId."
+          }
+        },
+        "CouponsV2": {
+          "table_comment": "Coupon definitions including discount rules and validity periods.",
+          "columns": {
+            "CouponId": "Unique coupon identifier. Primary key.",
+            "code": "The coupon code string entered by the customer.",
+            "discountAmount": "Fixed discount value of this coupon."
+          }
+        }
+      }
+    },
+    {
+      "kpi_set_id": "customer_kpis",
+      "kpi_set_name": "Customer KPIs",
+      "description": "Covers new registrations, active customers, user types, retention, and customer segmentation. Use when the user asks about customer growth, user activity, or account breakdown.",
+      "kpis": [
+        { "name": "New Registrations", "description": "Number of new user accounts created in the period." },
+        { "name": "Active Customers", "description": "Users who placed at least one order in the period." },
+        { "name": "Customer Type Breakdown", "description": "Count of users by type: customer, affiliate, associate." },
+        { "name": "Repeat Purchase Rate", "description": "Percentage of customers who ordered more than once." }
+      ],
+      "parameters": [
+        { "name": "start_date", "type": "date", "required": true, "description": "Start of the reporting period." },
+        { "name": "end_date", "type": "date", "required": true, "description": "End of the reporting period." }
+      ],
+      "base_query": "SELECT u.userId, u.firstName, u.lastName, u.email, u.userType, u.dateCreated, u.countryCode, o.orderId, o.orderDate, o.orderTotal FROM Users u LEFT JOIN Orders o ON u.userId = o.userId WHERE u.dateCreated BETWEEN :start_date AND :end_date OR o.orderDate BETWEEN :start_date AND :end_date",
+      "table_context": {
+        "Users": {
+          "table_comment": "All registered users. Join to Orders on userId to get purchase history.",
+          "columns": {
+            "userId": "Unique user identifier. Primary key.",
+            "firstName": "User's first name.",
+            "lastName": "User's last name.",
+            "email": "User's email address.",
+            "userType": "Type of user: customer, affiliate, or associate.",
+            "dateCreated": "Date the user account was created. Use for new registration filters.",
+            "countryCode": "ISO country code of the user's registered address."
+          }
+        },
+        "Orders": {
+          "table_comment": "Orders placed by users. Join to Users on userId.",
+          "columns": {
+            "orderId": "Unique order identifier. Primary key.",
+            "userId": "Foreign key to Users.userId.",
+            "orderDate": "Date the order was placed.",
+            "orderTotal": "Total value of the order."
+          }
+        }
+      }
+    },
+    {
+      "kpi_set_id": "autoship_kpis",
+      "kpi_set_name": "Autoship & Subscription KPIs",
+      "description": "Covers active subscriptions, autoship order volume, cancellations, and renewal rates. Use when the user asks about recurring orders, subscriptions, or autoship performance.",
+      "kpis": [
+        { "name": "Active Autoships", "description": "Number of currently active autoship subscriptions." },
+        { "name": "Autoship Order Count", "description": "Total orders generated by autoship in the period." },
+        { "name": "Autoship Revenue", "description": "Total revenue from autoship orders." },
+        { "name": "Cancellation Count", "description": "Number of autoship subscriptions cancelled in the period." }
+      ],
+      "parameters": [
+        { "name": "start_date", "type": "date", "required": true, "description": "Start of the reporting period." },
+        { "name": "end_date", "type": "date", "required": true, "description": "End of the reporting period." }
+      ],
+      "base_query": "SELECT a.autoShipId, a.userId, a.status, a.nextProcess, a.dateCreated, a.lastProcess, a.numAttempts, o.orderId, o.orderDate, o.orderTotal, u.firstName, u.lastName, u.email FROM AutoShipPrev a LEFT JOIN Orders o ON a.userId = o.userId AND o.orderDate BETWEEN :start_date AND :end_date LEFT JOIN Users u ON a.userId = u.userId WHERE a.dateCreated BETWEEN :start_date AND :end_date OR a.lastProcess BETWEEN :start_date AND :end_date",
+      "table_context": {
+        "AutoShipPrev": {
+          "table_comment": "Autoship subscription records. Each row is one active or historical subscription. Join to Users on userId and to Orders on userId + date range.",
+          "columns": {
+            "autoShipId": "Unique autoship subscription identifier. Primary key.",
+            "userId": "Foreign key to Users.userId.",
+            "status": "Current subscription status (active, cancelled, paused).",
+            "nextProcess": "Next scheduled processing date for this autoship.",
+            "dateCreated": "Date the autoship subscription was created.",
+            "lastProcess": "Date the autoship was last processed.",
+            "numAttempts": "Number of payment attempts made for the latest cycle."
+          }
+        },
+        "Orders": {
+          "table_comment": "Orders table. Used here to link autoship subscriptions to the orders they generate.",
+          "columns": {
+            "orderId": "Unique order identifier.",
+            "userId": "Foreign key to Users.userId.",
+            "orderDate": "Date the order was placed.",
+            "orderTotal": "Total value of the order."
+          }
+        },
+        "Users": {
+          "table_comment": "Registered users. Join to AutoShipPrev on userId for customer details.",
+          "columns": {
+            "userId": "Unique user identifier. Primary key.",
+            "firstName": "User's first name.",
+            "lastName": "User's last name.",
+            "email": "User's email address."
+          }
+        }
+      }
+    },
+    {
+      "kpi_set_id": "compensation_kpis",
+      "kpi_set_name": "Compensation & Commission KPIs",
+      "description": "Covers commission payouts, PV/GV volumes, MLM rank progression, and compensation plan performance. Use when the user asks about commissions, payouts, downline performance, or volume metrics.",
+      "kpis": [
+        { "name": "Total Commissions Paid", "description": "Sum of all commission payouts in the period." },
+        { "name": "Personal Volume (PV)", "description": "Total personal volume generated by associates." },
+        { "name": "Group Volume (GV)", "description": "Total group volume across the downline." },
+        { "name": "Active Associates by Rank", "description": "Count of associates grouped by compensation rank." }
+      ],
+      "parameters": [
+        { "name": "start_date", "type": "date", "required": true, "description": "Start of the reporting period." },
+        { "name": "end_date", "type": "date", "required": true, "description": "End of the reporting period." }
+      ],
+      "base_query": "SELECT cr.compRunId, cr.userId, cr.commissionAmount, cr.pv, cr.gv, cr.rankId, cr.periodStart, cr.periodEnd, u.firstName, u.lastName, u.email, u.userType, r.rankName FROM CompRuns cr LEFT JOIN Users u ON cr.userId = u.userId LEFT JOIN l_compProgramLevels r ON cr.rankId = r.id WHERE cr.periodStart >= :start_date AND cr.periodEnd <= :end_date",
+      "table_context": {
+        "CompRuns": {
+          "table_comment": "Compensation run records. Each row represents one payout calculation for a user in a period. Join to Users on userId and to l_compProgramLevels on rankId.",
+          "columns": {
+            "compRunId": "Unique compensation run identifier. Primary key.",
+            "userId": "Foreign key to Users.userId.",
+            "commissionAmount": "Total commission amount paid to this user in this run.",
+            "pv": "Personal volume accumulated by this user.",
+            "gv": "Group volume accumulated by this user's downline.",
+            "rankId": "Foreign key to l_compProgramLevels.id. Represents the user's rank.",
+            "periodStart": "Start date of this compensation period.",
+            "periodEnd": "End date of this compensation period."
+          }
+        },
+        "Users": {
+          "table_comment": "Registered users. Join to CompRuns on userId.",
+          "columns": {
+            "userId": "Unique user identifier. Primary key.",
+            "firstName": "User's first name.",
+            "lastName": "User's last name.",
+            "email": "User's email address.",
+            "userType": "Type of user: customer, affiliate, or associate."
+          }
+        },
+        "l_compProgramLevels": {
+          "table_comment": "Lookup table for compensation program ranks and levels.",
+          "columns": {
+            "id": "Unique rank identifier. Primary key.",
+            "rankName": "Human-readable name of the rank (e.g. Silver, Gold, Diamond)."
+          }
+        }
+      }
+    },
+    {
+      "kpi_set_id": "product_kpis",
+      "kpi_set_name": "Product KPIs",
+      "description": "Covers product sales volume, top-selling products, inventory status, and product revenue breakdown. Use when the user asks about product performance, best sellers, or SKU-level analysis.",
+      "kpis": [
+        { "name": "Units Sold", "description": "Total quantity of products sold in the period." },
+        { "name": "Revenue by Product", "description": "Total revenue broken down by product." },
+        { "name": "Top Selling Products", "description": "Products ranked by units sold or revenue." },
+        { "name": "Out of Stock Products", "description": "Products currently marked as out of stock." }
+      ],
+      "parameters": [
+        { "name": "start_date", "type": "date", "required": true, "description": "Start of the reporting period." },
+        { "name": "end_date", "type": "date", "required": true, "description": "End of the reporting period." }
+      ],
+      "base_query": "SELECT p.productId, p.productName, p.sku, p.price, p.OutOfStock, oi.quantity, oi.unitPrice, oi.lineTotal, o.orderId, o.orderDate, o.orderStatus FROM products p LEFT JOIN OrderItems oi ON p.productId = oi.productId LEFT JOIN Orders o ON oi.orderId = o.orderId WHERE o.orderDate BETWEEN :start_date AND :end_date",
+      "table_context": {
+        "products": {
+          "table_comment": "Product catalogue. Each row is one product SKU. Join to OrderItems on productId.",
+          "columns": {
+            "productId": "Unique product identifier. Primary key.",
+            "productName": "Display name of the product.",
+            "sku": "Stock keeping unit code.",
+            "price": "Base retail price of the product.",
+            "OutOfStock": "Boolean flag. 1 = currently out of stock."
+          }
+        },
+        "OrderItems": {
+          "table_comment": "Line items within each order. Each row is one product in one order. Join to Orders on orderId and to products on productId.",
+          "columns": {
+            "orderId": "Foreign key to Orders.orderId.",
+            "productId": "Foreign key to products.productId.",
+            "quantity": "Quantity of this product ordered.",
+            "unitPrice": "Price per unit at time of purchase.",
+            "lineTotal": "Total value for this line item (quantity x unitPrice)."
+          }
+        },
+        "Orders": {
+          "table_comment": "Orders table. Join to OrderItems on orderId.",
+          "columns": {
+            "orderId": "Unique order identifier. Primary key.",
+            "orderDate": "Date the order was placed.",
+            "orderStatus": "Current status of the order."
+          }
+        }
+      }
+    },
+    {
+      "kpi_set_id": "loyalty_kpis",
+      "kpi_set_name": "Loyalty & Incentive KPIs",
+      "description": "Covers loyalty points earned, redeemed, and outstanding balances. Also includes trip incentive qualification. Use when the user asks about loyalty programs, rewards, or incentive trip progress.",
+      "kpis": [
+        { "name": "Points Earned", "description": "Total loyalty points earned in the period." },
+        { "name": "Points Redeemed", "description": "Total loyalty points redeemed in the period." },
+        { "name": "Outstanding Points Balance", "description": "Net unredeemed points across all users." },
+        { "name": "Trip Incentive Qualifiers", "description": "Number of users who have qualified for the incentive trip." }
+      ],
+      "parameters": [
+        { "name": "start_date", "type": "date", "required": true, "description": "Start of the reporting period." },
+        { "name": "end_date", "type": "date", "required": true, "description": "End of the reporting period." }
+      ],
+      "base_query": "SELECT lp.loyaltyId, lp.userId, lp.pointsEarned, lp.pointsRedeemed, lp.pointsBalance, lp.transactionDate, lp.transactionType, ti.tripId, ti.qualificationStatus, ti.qualificationDate, u.firstName, u.lastName, u.email FROM LoyaltyPoints lp LEFT JOIN TripIncentives ti ON lp.userId = ti.userId LEFT JOIN Users u ON lp.userId = u.userId WHERE lp.transactionDate BETWEEN :start_date AND :end_date",
+      "table_context": {
+        "LoyaltyPoints": {
+          "table_comment": "Loyalty point transactions. Each row is one earn or redeem event. Join to Users on userId.",
+          "columns": {
+            "loyaltyId": "Unique transaction identifier. Primary key.",
+            "userId": "Foreign key to Users.userId.",
+            "pointsEarned": "Points earned in this transaction.",
+            "pointsRedeemed": "Points redeemed in this transaction.",
+            "pointsBalance": "Running points balance for this user after this transaction.",
+            "transactionDate": "Date of this points transaction.",
+            "transactionType": "Type of transaction: earn, redeem, adjustment."
+          }
+        },
+        "TripIncentives": {
+          "table_comment": "Incentive trip qualification records. Join to LoyaltyPoints or Users on userId.",
+          "columns": {
+            "tripId": "Unique trip incentive identifier.",
+            "userId": "Foreign key to Users.userId.",
+            "qualificationStatus": "Whether the user has qualified: qualified, pending, not_qualified.",
+            "qualificationDate": "Date the user achieved qualification."
+          }
+        },
+        "Users": {
+          "table_comment": "Registered users. Join on userId.",
+          "columns": {
+            "userId": "Unique user identifier. Primary key.",
+            "firstName": "User's first name.",
+            "lastName": "User's last name.",
+            "email": "User's email address."
+          }
+        }
+      }
+    }
+  ]
+}

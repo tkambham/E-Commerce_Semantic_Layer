@@ -1,0 +1,1304 @@
+{
+  "Orders": {
+    "table_comment": "Core orders table. Each row represents one customer order. Join to Users on userId for customer info. Join to OrderPackages on orderId for shipment packages. Join to OrdersShipped on orderId for shipping/tracking records.",
+    "schema": "dbo",
+    "columns": {
+      "orderId": {
+        "data_type": "int",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "extra": "identity",
+        "column_comment": "Unique identifier for each order. Primary key."
+      },
+      "userId": {
+        "data_type": "int",
+        "is_nullable": "NO",
+        "column_key": "MUL",
+        "column_comment": "The user who placed this order.",
+        "references": { "table": "Users", "column": "userId" }
+      },
+      "orderDate": {
+        "data_type": "smalldatetime",
+        "is_nullable": "YES",
+        "column_comment": "Date and time the order was placed. Use for all date-range filters."
+      },
+      "orderTotal": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Total monetary value of the order in the transaction currency."
+      },
+      "orderStatus": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Current status of the order (e.g. complete, pending, refunded, cancelled)."
+      },
+      "taxAmount": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Tax charged on this order."
+      },
+      "shippingAmount": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Shipping fee charged on this order."
+      },
+      "discountAmount": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Total discount deducted from this order."
+      },
+      "currencyCode": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "ISO currency code for this order (e.g. USD, EUR, GBP)."
+      },
+      "wholesaleSubtotal": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Subtotal calculated at wholesale pricing for this order."
+      }
+    }
+  },
+
+  "Users": {
+    "table_comment": "All registered users including customers, affiliates, and associates. Join to Orders on userId to get purchase history. Join to AutoShipPrev on userId for subscription records.",
+    "schema": "dbo",
+    "columns": {
+      "userId": {
+        "data_type": "int",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "extra": "identity",
+        "column_comment": "Unique user identifier. Primary key."
+      },
+      "firstName": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "User's first name."
+      },
+      "lastName": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "User's last name."
+      },
+      "email": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "User's email address."
+      },
+      "userType": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Type of user: customer, affiliate, or associate."
+      },
+      "dateCreated": {
+        "data_type": "smalldatetime",
+        "is_nullable": "YES",
+        "column_comment": "Date the user account was created. Use for new registration filters."
+      },
+      "countryCode": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "ISO country code of the user's registered address."
+      }
+    }
+  },
+
+  "AutoShipPrev": {
+    "table_comment": "Autoship subscription records. Each row is one active or historical subscription. Join to Users on userId and to Orders on userId + date range to link subscriptions to the orders they generate.",
+    "schema": "dbo",
+    "columns": {
+      "autoOrderId": {
+        "data_type": "int",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "extra": "identity",
+        "column_comment": "Unique autoship subscription identifier. Primary key."
+      },
+      "userId": {
+        "data_type": "int",
+        "is_nullable": "NO",
+        "column_key": "MUL",
+        "column_comment": "The user this autoship belongs to.",
+        "references": { "table": "Users", "column": "userId" }
+      },
+      "productId": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "The product subscribed to.",
+        "references": { "table": "products", "column": "productId" }
+      },
+      "quantity": {
+        "data_type": "tinyint",
+        "is_nullable": "YES",
+        "column_comment": "Quantity of the product per autoship cycle."
+      },
+      "amount": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Recurring charge amount per cycle."
+      },
+      "shipping": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Shipping cost per cycle."
+      },
+      "tax": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Tax per cycle."
+      },
+      "active": {
+        "data_type": "bit",
+        "is_nullable": "NO",
+        "column_comment": "1 = active subscription, 0 = inactive."
+      },
+      "shipWeek": {
+        "data_type": "tinyint",
+        "is_nullable": "NO",
+        "column_comment": "Week of the month when this autoship is processed."
+      },
+      "shipDay": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Day of the month when this autoship is processed."
+      },
+      "shipName": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Full name on the shipping address."
+      },
+      "shipAddress1": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Primary shipping address line."
+      },
+      "shipAddress2": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Secondary shipping address line."
+      },
+      "shipCity": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Shipping city."
+      },
+      "shipZip": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Shipping postal/zip code."
+      },
+      "shipState": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Shipping state or province."
+      },
+      "shipCountry": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Shipping country."
+      },
+      "lastProcess": {
+        "data_type": "datetime",
+        "is_nullable": "YES",
+        "column_comment": "Date this autoship was last successfully processed."
+      },
+      "lastAttempt": {
+        "data_type": "datetime",
+        "is_nullable": "YES",
+        "column_comment": "Date of the last payment attempt (successful or not)."
+      },
+      "nextProcess": {
+        "data_type": "date",
+        "is_nullable": "YES",
+        "column_comment": "Next scheduled processing date for this autoship."
+      },
+      "numAttempts": {
+        "data_type": "tinyint",
+        "is_nullable": "YES",
+        "column_comment": "Number of payment attempts made for the current cycle."
+      },
+      "numAttemptsMonth": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Total payment attempts made this month."
+      },
+      "dateCreated": {
+        "data_type": "smalldatetime",
+        "is_nullable": "YES",
+        "column_comment": "Date the autoship subscription was created."
+      },
+      "lastTransactionId": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Transaction ID of the last payment attempt."
+      },
+      "lastTransactionResult": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Result message from the last payment attempt (e.g. approved, declined)."
+      },
+      "cv": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Commission volume associated with this autoship."
+      },
+      "autoOrderTypeId": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Type classification of this autoship order."
+      },
+      "autoshipIntervalId": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Interval setting for this autoship (e.g. monthly, bi-monthly)."
+      },
+      "autoOrderTags": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Custom tags applied to this autoship order."
+      },
+      "discountPct": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Discount percentage applied to this autoship."
+      },
+      "SegMetricsStatus": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Status field used for SegMetrics integration tracking."
+      }
+    }
+  },
+
+  "products": {
+    "table_comment": "Product catalogue. Each row is one product SKU. Join to AutoShipPrev on productId for subscription products. Join to OrderPackageItems on productId for line-item detail.",
+    "schema": "dbo",
+    "columns": {
+      "productId": {
+        "data_type": "int",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "extra": "identity",
+        "column_comment": "Unique product identifier. Primary key."
+      },
+      "sku": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Stock keeping unit code."
+      },
+      "productCode": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Internal product code."
+      },
+      "taxCode": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Tax classification code used for tax calculation."
+      },
+      "categoryId": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Product category identifier."
+      },
+      "name": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Full display name of the product."
+      },
+      "nameShort": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Short display name of the product."
+      },
+      "priceRetail": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Standard retail price of the product."
+      },
+      "priceWholesale": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Wholesale price of the product."
+      },
+      "priceWholesaleGBR": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Wholesale price for GBR (British pound) market."
+      },
+      "priceRetailGBR": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Retail price for GBR market."
+      },
+      "cv": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Commission volume value assigned to this product."
+      },
+      "cvGBR": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Commission volume for GBR market."
+      },
+      "weight": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Weight of the product in pounds (used for shipping calculations)."
+      },
+      "description": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Full product description."
+      },
+      "subheading": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Short marketing subheading for the product."
+      },
+      "groupName": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Group name used to cluster related products."
+      },
+      "groupProductIDs": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Comma-separated list of productIds that belong to the same product group."
+      },
+      "relatedProductIDs": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Comma-separated list of productIds for related/upsell products."
+      },
+      "img": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Image filename or path for the product."
+      },
+      "shipping": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Fixed shipping cost for this product."
+      },
+      "warehouseId": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Warehouse that fulfills this product."
+      },
+      "shipable": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = physical product that ships. 0 = digital or non-shippable product."
+      },
+      "CVtoSponsor": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = CV from this product flows to the sponsor."
+      },
+      "sort": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Sort order for display in product listings."
+      },
+      "categoryLabel": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Display label for the product's category."
+      },
+      "vatDutyWholesaleGBR": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "VAT/duty amount at wholesale price for GBR."
+      },
+      "vatDutyRetailGBR": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "VAT/duty amount at retail price for GBR."
+      },
+      "priceWholesaleInvoiceGBR": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Invoice price at wholesale for GBR market."
+      },
+      "OutOfStock": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = product is currently out of stock."
+      },
+      "hideFromSearch": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = exclude this product from search results."
+      },
+      "showInAdmin": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = show this product in admin panel listings."
+      },
+      "showInAdminAutoship": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = show this product in the admin autoship selection."
+      },
+      "isOmniSendImported": {
+        "data_type": "bit",
+        "is_nullable": "NO",
+        "column_comment": "1 = product has been imported into OmniSend marketing platform."
+      },
+      "inventoryHold": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = product is on inventory hold and cannot be ordered."
+      }
+    }
+  },
+
+  "ProductPrices": {
+    "table_comment": "Multi-currency pricing table for products. Each row is a price record for one product in one currency. Join to products on productId.",
+    "schema": "dbo",
+    "columns": {
+      "productPriceId": {
+        "data_type": "int",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "extra": "identity",
+        "column_comment": "Unique price record identifier. Primary key."
+      },
+      "productId": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "The product this price applies to.",
+        "references": { "table": "products", "column": "productId" }
+      },
+      "productSku": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "SKU of the product for this price record."
+      },
+      "currency": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "ISO currency code (e.g. USD, GBP, EUR)."
+      },
+      "retailPrice": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Retail price in the specified currency."
+      },
+      "wholesalePrice": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Wholesale price in the specified currency."
+      },
+      "cv": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Commission volume in the specified currency."
+      },
+      "retailPriceTax": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Tax amount on retail price in the specified currency."
+      },
+      "wholesalePriceTax": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Tax amount on wholesale price in the specified currency."
+      },
+      "retailPriceInvoice": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Invoice retail price (may differ from display retail price)."
+      },
+      "wholesalePriceInvoice": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Invoice wholesale price."
+      }
+    }
+  },
+
+  "CouponsV2": {
+    "table_comment": "Coupon definitions including discount rules, validity periods, and audience restrictions. Join to OrderCoupons on CouponId to see which orders used a coupon.",
+    "schema": "dbo",
+    "columns": {
+      "CouponId": {
+        "data_type": "int",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "extra": "identity",
+        "column_comment": "Unique coupon identifier. Primary key."
+      },
+      "code": {
+        "data_type": "varchar",
+        "is_nullable": "NO",
+        "column_comment": "The coupon code string the customer enters at checkout."
+      },
+      "startDateTime": {
+        "data_type": "smalldatetime",
+        "is_nullable": "YES",
+        "column_comment": "Date and time when the coupon becomes valid."
+      },
+      "endDateTime": {
+        "data_type": "smalldatetime",
+        "is_nullable": "YES",
+        "column_comment": "Date and time when the coupon expires."
+      },
+      "firstOrderOnly": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = coupon can only be used on the customer's first order."
+      },
+      "audienceCustomers": {
+        "data_type": "bit",
+        "is_nullable": "NO",
+        "column_comment": "1 = coupon is valid for customer user type."
+      },
+      "audienceAffiliates": {
+        "data_type": "bit",
+        "is_nullable": "NO",
+        "column_comment": "1 = coupon is valid for affiliate user type."
+      },
+      "audienceVbos": {
+        "data_type": "bit",
+        "is_nullable": "NO",
+        "column_comment": "1 = coupon is valid for VBO/associate user type."
+      },
+      "autoshipRequired": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = customer must have an active autoship to use this coupon."
+      },
+      "freeShipping": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = coupon grants free shipping."
+      },
+      "freeVboPass": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = coupon grants a free VBO pass."
+      },
+      "customReturnMessage": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Custom message shown to the customer when they apply this coupon."
+      },
+      "autoAssignEnrollerId": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Automatically assigns this enroller ID when the coupon is used."
+      },
+      "numUsesAllowed": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Maximum total number of times this coupon can be used across all users."
+      },
+      "numUserPerUserAllowed": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Maximum number of times a single user can use this coupon."
+      },
+      "userId": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "If set, restricts this coupon to a specific user.",
+        "references": { "table": "Users", "column": "userId" }
+      },
+      "discountAmount": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Fixed discount value of this coupon."
+      },
+      "autoshipSku": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "SKU that must be present in the autoship for this coupon to apply."
+      },
+      "requiredSkuInCart": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "SKU(s) that must be in the cart for this coupon to be valid."
+      },
+      "requiredSkuSubstring": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Partial SKU string that must match a cart item."
+      },
+      "requiredNeverPurchasedSKU": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "SKU(s) the customer must never have purchased to use this coupon."
+      },
+      "minSubtotal": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Minimum cart subtotal required to apply this coupon."
+      },
+      "excludedCountries": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Comma-separated country codes where this coupon cannot be used."
+      },
+      "requiredCountries": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Comma-separated country codes where this coupon can be used."
+      }
+    }
+  },
+
+  "OrderPackages": {
+    "table_comment": "Shipment packages associated with orders. Each row is one physical package for an order. Join to Orders on orderID. Join to OrderPackageItems on orderPackageId for the contents of each package.",
+    "schema": "dbo",
+    "columns": {
+      "orderPackageId": {
+        "data_type": "bigint",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "extra": "identity",
+        "column_comment": "Unique package identifier. Primary key."
+      },
+      "orderID": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "The order this package belongs to.",
+        "references": { "table": "Orders", "column": "orderId" }
+      }
+    }
+  },
+
+  "OrderPackageItems": {
+    "table_comment": "Individual product line items within a shipment package. Each row is one SKU inside one package. Join to OrderPackages on orderPackageId.",
+    "schema": "dbo",
+    "columns": {
+      "sku": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "SKU of the product in this package line item."
+      },
+      "skuDescr": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Description of the SKU."
+      },
+      "quantity": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Quantity of this SKU in the package."
+      },
+      "pricePer": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Price per unit for this line item."
+      },
+      "pricePerInvoice": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Invoice price per unit for this line item."
+      }
+    }
+  },
+
+  "OrdersShipped": {
+    "table_comment": "Shipping and tracking records for fulfilled orders. Each row is one shipment import record. Join to Orders on orderId for full order details.",
+    "schema": "dbo",
+    "columns": {
+      "orderImportId": {
+        "data_type": "int",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "extra": "identity",
+        "column_comment": "Unique shipment import record identifier. Primary key."
+      },
+      "orderId": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "The order this shipment record belongs to.",
+        "references": { "table": "Orders", "column": "orderId" }
+      },
+      "userId": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "User who placed the order.",
+        "references": { "table": "Users", "column": "userId" }
+      },
+      "name": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Full name on the shipping address."
+      },
+      "address": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Street address of the shipment destination."
+      },
+      "city": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "City of the shipment destination."
+      },
+      "state": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "State or province of the shipment destination."
+      },
+      "zip": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Postal/zip code of the shipment destination."
+      },
+      "phone": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Phone number for the shipment recipient."
+      },
+      "SkuOrdered": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "SKU(s) included in this shipment."
+      },
+      "SkuDesc": {
+        "data_type": "text",
+        "is_nullable": "YES",
+        "column_comment": "Description of the SKU(s) in this shipment."
+      },
+      "quantity": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Quantity shipped."
+      },
+      "trackingNumber": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Carrier tracking number for this shipment."
+      },
+      "dateCreated": {
+        "data_type": "smalldatetime",
+        "is_nullable": "YES",
+        "column_comment": "Date this shipment record was created."
+      },
+      "dateModified": {
+        "data_type": "smalldatetime",
+        "is_nullable": "YES",
+        "column_comment": "Date this shipment record was last updated."
+      }
+    }
+  },
+
+  "AvalaraTransactions": {
+    "table_comment": "Tax transaction records from the Avalara tax service. Each row is one tax calculation event. Used for tax reporting and reconciliation.",
+    "schema": "dbo",
+    "columns": {
+      "DOC CODE": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Avalara document code linking to the originating order."
+      },
+      "DOC DATE": {
+        "data_type": "datetime",
+        "is_nullable": "YES",
+        "column_comment": "Date of the tax transaction."
+      },
+      "DOC STATUS": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Status of the Avalara document (e.g. committed, voided)."
+      },
+      "CUST VENDOR CODE": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Customer or vendor code in Avalara."
+      },
+      "REGION": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "State/region code for this tax transaction."
+      },
+      "AMOUNT": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Total transaction amount subject to tax calculation."
+      },
+      "NOT TAXED": {
+        "data_type": "money",
+        "is_nullable": "YES",
+        "column_comment": "Portion of the transaction that was not taxable."
+      },
+      "TAXABLE": {
+        "data_type": "money",
+        "is_nullable": "NO",
+        "column_comment": "Portion of the transaction that was taxable."
+      }
+    }
+  },
+
+  "FDMOrders": {
+    "table_comment": "FDM (fulfilment data management) order import records. Used for reconciling fulfilment with external systems.",
+    "schema": "dbo",
+    "columns": {
+      "ItemDescription": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Description of the item in the FDM order."
+      },
+      "Quantity": {
+        "data_type": "float",
+        "is_nullable": "YES",
+        "column_comment": "Quantity of the item."
+      },
+      "PriceEach": {
+        "data_type": "float",
+        "is_nullable": "YES",
+        "column_comment": "Unit price of the item."
+      },
+      "Field7": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Custom FDM field 7."
+      },
+      "FirstName": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Recipient first name."
+      },
+      "LastName": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Recipient last name."
+      },
+      "Company": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Recipient company name."
+      },
+      "Address1": {
+        "data_type": "nvarchar",
+        "is_nullable": "YES",
+        "column_comment": "Primary address line for the FDM shipment."
+      }
+    }
+  },
+
+  "WeeklyKPI_Snapshot": {
+    "table_comment": "Pre-aggregated weekly KPI snapshot table. Each row is one week's snapshot of business metrics. Use for dashboard-style weekly reporting without needing to aggregate transactional tables. Standalone — no joins required.",
+    "schema": "dbo",
+    "columns": {
+      "SnapshotId": {
+        "data_type": "int",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "extra": "identity",
+        "column_comment": "Unique snapshot record identifier. Primary key."
+      },
+      "WeekStartDate": {
+        "data_type": "date",
+        "is_nullable": "NO",
+        "column_comment": "Start date of the week this snapshot covers."
+      },
+      "WeekEndDate": {
+        "data_type": "date",
+        "is_nullable": "NO",
+        "column_comment": "End date of the week this snapshot covers."
+      },
+      "CreatedDate": {
+        "data_type": "datetime",
+        "is_nullable": "NO",
+        "column_comment": "Date and time this snapshot record was created."
+      },
+      "GrossRevenue": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Total gross revenue for the week."
+      },
+      "PriorWeekGrossRevenue": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Gross revenue from the prior week for comparison."
+      },
+      "MRR": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Monthly recurring revenue as of this snapshot."
+      },
+      "ARPU": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Average revenue per user for the week."
+      },
+      "RefundCount": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Number of refunds processed this week."
+      },
+      "RefundAmount": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Total refund amount this week."
+      },
+      "ChargebackCount": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Number of chargebacks this week."
+      },
+      "ChargebackAmount": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Total chargeback amount this week."
+      },
+      "EWalletLiabilities": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Total outstanding e-wallet balance liabilities."
+      },
+      "CommissionsPaid": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Total commissions paid out this week."
+      },
+      "CommissionsPending": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Total commissions pending payout."
+      },
+      "Revenue30Day": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Rolling 30-day revenue as of this snapshot."
+      },
+      "ARPU30Day": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Average revenue per user over the last 30 days."
+      },
+      "RefundCount30Day": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Number of refunds in the last 30 days."
+      },
+      "RefundAmount30Day": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Total refund amount in the last 30 days."
+      },
+      "ChargebackCount30Day": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Number of chargebacks in the last 30 days."
+      },
+      "ChargebackAmount30Day": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Total chargeback amount in the last 30 days."
+      },
+      "CommissionsPaid30Day": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Total commissions paid in the last 30 days."
+      },
+      "NewRegistrations": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Number of new user registrations this week."
+      },
+      "PriorWeekRegistrations": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "New registrations from the prior week for comparison."
+      },
+      "NewCustomers": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "New customer accounts created this week."
+      },
+      "NewAffiliates": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "New affiliate accounts created this week."
+      },
+      "NewAssociates": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "New associate accounts created this week."
+      },
+      "NewAccountsWithOrders": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "New accounts that placed at least one order this week."
+      },
+      "TotalActiveUsers": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Total active user count as of this snapshot."
+      },
+      "ActiveCustomers": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Number of active customer accounts."
+      },
+      "ActiveAffiliates": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Number of active affiliate accounts."
+      },
+      "ActiveAssociates": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Number of active associate accounts."
+      },
+      "ActivationRate": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Weekly activation rate (new accounts that placed an order / new registrations)."
+      },
+      "ConversionRate": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Weekly conversion rate."
+      },
+      "NewRegistrations30Day": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "New registrations in the last 30 days."
+      },
+      "NewCustomers30Day": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "New customers in the last 30 days."
+      },
+      "NewAffiliates30Day": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "New affiliates in the last 30 days."
+      },
+      "NewAssociates30Day": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "New associates in the last 30 days."
+      },
+      "NewAccountsWithOrders30Day": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "New accounts with orders in the last 30 days."
+      },
+      "ActivationRate30Day": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "30-day activation rate."
+      },
+      "ConversionRate30Day": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "30-day conversion rate."
+      },
+      "TotalActiveNodes": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Total active network nodes as of this snapshot."
+      },
+      "NodesFull": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Count of full-tier nodes."
+      },
+      "NodesHalf": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Count of half-tier nodes."
+      },
+      "NodesQuarter": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Count of quarter-tier nodes."
+      },
+      "NodesMini": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Count of mini-tier nodes."
+      },
+      "NodesCirrus": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Count of Cirrus nodes."
+      },
+      "NodesExternal": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Count of external nodes."
+      },
+      "NewNodesDeployed": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "New nodes deployed this week."
+      },
+      "NewNodesCirrus": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "New Cirrus nodes deployed this week."
+      },
+      "NewNodesExternal": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "New external nodes deployed this week."
+      },
+      "CancelledSubsWeek": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Number of subscriptions cancelled this week."
+      },
+      "CancelledSubs30Day": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Subscriptions cancelled in the last 30 days."
+      },
+      "WeeklyChurnRate": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Subscription churn rate for the week."
+      },
+      "RollingChurnRate30Day": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Rolling 30-day subscription churn rate."
+      },
+      "AtRiskAccounts": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Number of accounts flagged as at-risk of churning."
+      },
+      "OpenSupportTickets": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Number of open support tickets as of this snapshot."
+      },
+      "PriorWeekOpenTickets": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Open support tickets from the prior week."
+      },
+      "AvgResolutionTimeHours": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Average support ticket resolution time in hours."
+      },
+      "CriticalIssues": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Number of critical support issues this week."
+      },
+      "SystemUptimePercent": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "System uptime percentage for the week."
+      },
+      "SalesMTD": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Sales month-to-date as of this snapshot."
+      },
+      "SalesPriorMonthSameRange": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Sales from the prior month over the same date range (for MTD comparison)."
+      },
+      "SalesPriorMonthTotal": {
+        "data_type": "decimal",
+        "is_nullable": "YES",
+        "column_comment": "Total sales from the prior full month."
+      }
+    }
+  },
+
+  "l_compProgramLevels": {
+    "table_comment": "Lookup table for compensation program ranks and levels. Join to compensation run tables on rankId or levelId.",
+    "schema": "dbo",
+    "columns": {
+      "id": {
+        "data_type": "int",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "extra": "identity",
+        "column_comment": "Unique rank/level identifier. Primary key."
+      },
+      "recievePGV": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = this level receives Personal Group Volume."
+      },
+      "recievePaidCV": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = this level receives paid commission volume."
+      },
+      "recievePoolShares": {
+        "data_type": "bit",
+        "is_nullable": "YES",
+        "column_comment": "1 = this level participates in pool share bonuses."
+      },
+      "fastStartSequence": {
+        "data_type": "int",
+        "is_nullable": "YES",
+        "column_comment": "Sequence order for fast-start bonus eligibility at this level."
+      }
+    }
+  },
+
+  "l_CompRunStatus": {
+    "table_comment": "Lookup table for compensation run status codes. Used to interpret the status of a compensation run record.",
+    "schema": "dbo",
+    "columns": {
+      "compRunStatusId": {
+        "data_type": "int",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "extra": "identity",
+        "column_comment": "Unique status identifier. Primary key."
+      },
+      "compRunStatus": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Human-readable compensation run status label (e.g. pending, complete, cancelled)."
+      }
+    }
+  },
+
+  "l_compVolumeTypes": {
+    "table_comment": "Lookup table for compensation volume type codes (e.g. PV, GV, CV). Used to classify volume entries in compensation calculations.",
+    "schema": "dbo",
+    "columns": {
+      "id": {
+        "data_type": "int",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "extra": "identity",
+        "column_comment": "Unique volume type identifier. Primary key."
+      },
+      "volumeTypeCode": {
+        "data_type": "varchar",
+        "is_nullable": "YES",
+        "column_comment": "Short code for the volume type (e.g. PV, GV, CV)."
+      }
+    }
+  },
+
+  "Province": {
+    "table_comment": "Lookup table for province/state codes by country. Used to validate or display geographic data.",
+    "schema": "dbo",
+    "columns": {
+      "CountryIso2": {
+        "data_type": "nvarchar",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "column_comment": "Two-character ISO country code. Part of composite primary key."
+      },
+      "Code": {
+        "data_type": "nvarchar",
+        "is_nullable": "NO",
+        "column_key": "PRI",
+        "column_comment": "Province/state code. Part of composite primary key."
+      }
+    }
+  }
+}
