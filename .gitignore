@@ -56,4 +56,4 @@ htmlcov/
 
 # ── Misc ──────────────────────────────────────────────────────
 *.bak
-*.tmp
+*.tmpfrontend/node_modules/

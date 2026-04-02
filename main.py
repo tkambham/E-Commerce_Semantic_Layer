@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -8,6 +9,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 import google.generativeai as genai
+from google.api_core.exceptions import ResourceExhausted
 
 from orchastrator import orchestrate
 
@@ -17,13 +19,36 @@ load_dotenv()
 
 # Gemini
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-gemini = genai.GenerativeModel("gemini-2.0-flash")
+gemini = genai.GenerativeModel("gemini-1.5-flash")
+
+def _call_gemini(prompt: str, retries: int = 4, backoff: float = 5.0) -> str:
+    for attempt in range(retries):
+        try:
+            return gemini.generate_content(prompt).text.strip()
+        except ResourceExhausted:
+            if attempt == retries - 1:
+                raise
+            wait = backoff * (2 ** attempt)
+            print(f"[Gemini] Rate limited. Retrying in {wait:.0f}s... (attempt {attempt + 1}/{retries})")
+            time.sleep(wait)
+    raise RuntimeError("Gemini call failed after all retries.")
 
 # SQLAlchemy engine (SQL Server via pyodbc)
+from urllib.parse import quote_plus
+
+_server   = os.getenv("DB_SERVER", "localhost")
+_database = os.getenv("DB_NAME")
+_user     = os.getenv("DB_USER")
+_password = quote_plus(os.getenv("DB_PASSWORD", ""))  # encodes special chars e.g. @ → %40
+_driver   = quote_plus(os.getenv("DB_DRIVER", "ODBC Driver 18 for SQL Server"))
+
 _conn_str = (
-    f"mssql+pyodbc://{os.getenv('DB_USERNAME')}:{os.getenv('DB_PASSWORD')}"
-    f"@{os.getenv('DB_SERVER')}/{os.getenv('DB_DATABASE')}"
-    f"?driver={os.getenv('DB_DRIVER', 'ODBC+Driver+17+for+SQL+Server')}"
+    f"mssql+pyodbc://{_user}:{_password}"
+    f"@{_server},1433/{_database}"
+    f"?driver={_driver}"
+    f"&TrustServerCertificate=yes"
+    f"&Encrypt=no"
+    f"&connection_timeout=30"
 )
 engine = create_engine(_conn_str, fast_executemany=True)
 
@@ -100,8 +125,7 @@ def select_visualization(
         row_count=len(rows),
         sample_rows=json.dumps(rows[:3]),
     )
-    response = gemini.generate_content(prompt)
-    raw = response.text.strip().strip("```json").strip("```").strip()
+    raw = _call_gemini(prompt).strip("```json").strip("```").strip()
     parsed = json.loads(raw)
     return parsed.get("type", "table"), parsed.get("config", {})
 
@@ -137,6 +161,14 @@ async def query(request: QueryRequest):
     refined_sql   = result["refined_query"]
     kpi_set_id    = result["kpi_set_id"]
     kpi_set_name  = result["kpi_set_name"]
+
+    # Guard: make sure we actually got SQL back, not a question or explanation
+    first_word = refined_sql.strip().split()[0].upper() if refined_sql.strip() else ""
+    if first_word not in ("SELECT", "WITH", "EXEC", "DECLARE"):
+        raise HTTPException(
+            status_code=500,
+            detail=f"Orchestration returned invalid SQL: {refined_sql[:200]}"
+        )
 
     # Step 3: execute query
     try:

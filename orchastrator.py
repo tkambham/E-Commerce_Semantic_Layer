@@ -1,7 +1,11 @@
 import os
 import json
+import time
 import google.generativeai as genai
+from google.api_core.exceptions import ResourceExhausted
+from dotenv import load_dotenv
 
+load_dotenv()
 # ── Config ────────────────────────────────────────────────────────────────────
 
 BASE_DIR           = os.path.dirname(os.path.abspath(__file__))
@@ -10,7 +14,28 @@ SCHEMA_FILE        = os.path.join(BASE_DIR, "data/schema.json")
 AI_SYSTEM_PROMPT   = os.path.join(BASE_DIR, "AI_SYSTEM_PROMPT.md")
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-model = genai.GenerativeModel("gemini-2.0-flash")
+model = genai.GenerativeModel("gemini-2.5-flash")
+
+print(model)
+
+# ── Retry helper ──────────────────────────────────────────────
+
+def _call_gemini(prompt: str, retries: int = 4, backoff: float = 5.0) -> str:
+    """
+    Call Gemini with exponential backoff on 429 rate-limit errors.
+    Raises after `retries` failed attempts.
+    """
+    for attempt in range(retries):
+        try:
+            response = model.generate_content(prompt)
+            return response.text.strip()
+        except ResourceExhausted as e:
+            if attempt == retries - 1:
+                raise
+            wait = backoff * (2 ** attempt)   # 5s, 10s, 20s, 40s
+            print(f"[Gemini] Rate limited. Retrying in {wait:.0f}s... (attempt {attempt + 1}/{retries})")
+            time.sleep(wait)
+    raise RuntimeError("Gemini call failed after all retries.")
 
 # ── Loaders ───────────────────────────────────────────────────────────────────
 
@@ -59,8 +84,7 @@ Rules:
 - If no set clearly matches, return the closest one.
 """.strip()
 
-    response = model.generate_content(selection_prompt)
-    selected_id = response.text.strip().strip('"').strip("'")
+    selected_id = _call_gemini(selection_prompt).strip('"').strip("'")
 
     matched = next((s for s in kpi_sets if s["kpi_set_id"] == selected_id), None)
     if not matched:
@@ -72,6 +96,12 @@ Rules:
     return matched
 
 # ── Step 3: Query refinement ──────────────────────────────────────────────────
+
+def _is_valid_sql(text: str) -> bool:
+    """Basic check — a valid response must start with a SQL keyword."""
+    t = text.strip().lstrip("```sql").lstrip("```").strip().upper()
+    return any(t.startswith(kw) for kw in ("SELECT", "WITH", "EXEC", "DECLARE"))
+
 
 def refine_query(user_question: str, kpi_set: dict, system_prompt: str) -> str:
     """
@@ -101,12 +131,27 @@ Parameters available:
 Instructions:
 - Remove columns and joins not needed for this specific question.
 - Inject parameter values extracted from the user question.
+- For year-over-year or period comparison questions, use a single query with
+  conditional aggregation (e.g. SUM(CASE WHEN YEAR(orderDate) = 2024 THEN ... END))
+  so both periods are returned in one result set with clear column aliases.
+- Always include a percentage change column when comparing two periods.
 - Preserve all JOIN conditions and primary/foreign key columns.
-- Return only the final refined T-SQL query. No explanation, no markdown.
+- Return only the final refined T-SQL query. No explanation, no markdown, no questions.
 """.strip()
 
-    response = model.generate_content(refinement_prompt)
-    return response.text.strip()
+    raw = _call_gemini(refinement_prompt)
+
+    # Strip markdown code fences if Gemini wrapped the SQL
+    clean = raw.strip().lstrip("```sql").lstrip("```").rstrip("```").strip()
+
+    if not _is_valid_sql(clean):
+        # Gemini returned a question or explanation — force a retry with stricter prompt
+        retry_prompt = refinement_prompt + "\n\nCRITICAL: Your last response was not valid SQL. Return ONLY the SQL query, nothing else."
+        clean = _call_gemini(retry_prompt).strip().lstrip("```sql").lstrip("```").rstrip("```").strip()
+        if not _is_valid_sql(clean):
+            raise ValueError(f"Gemini did not return valid SQL after retry. Got: {clean[:200]}")
+
+    return clean
 
 # ── Main orchestration entry point ────────────────────────────────────────────
 
