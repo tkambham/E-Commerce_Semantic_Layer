@@ -3,7 +3,9 @@ import json
 import time
 import google.generativeai as genai
 from google.api_core.exceptions import ResourceExhausted
+from dotenv import load_dotenv
 
+load_dotenv()
 # ── Config ────────────────────────────────────────────────────────────────────
 
 BASE_DIR           = os.path.dirname(os.path.abspath(__file__))
