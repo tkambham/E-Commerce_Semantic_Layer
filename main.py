@@ -3,7 +3,7 @@ import json
 import time
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -12,6 +12,7 @@ import google.generativeai as genai
 from google.api_core.exceptions import ResourceExhausted
 
 from orchastrator import orchestrate
+from logger import api_logger, sql_logger, error_logger
 
 # ── Bootstrap ─────────────────────────────────────────────────
 
@@ -63,6 +64,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+#Logging
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    api_logger.info(f"REQUEST  | {request.method} {request.url.path}")
+    try:
+        response = await call_next(request)
+        duration = round((time.time() - start_time) * 1000, 2)
+        api_logger.info(f"RESPONSE | {request.method} {request.url.path} | status={response.status_code} | {duration}ms")
+        return response
+    except Exception as e:
+        error_logger.exception(f"Unhandled error during {request.method} {request.url.path}: {e}")
+        raise
 
 # ── Models ────────────────────────────────────────────────────
 
@@ -133,29 +149,35 @@ def select_visualization(
 # ── Query execution ───────────────────────────────────────────
 
 def run_query(sql: str) -> tuple[list[str], list[list[Any]]]:
-    """Execute the refined SQL and return (columns, rows)."""
-    with engine.connect() as conn:
-        result = conn.execute(text(sql))
-        columns = list(result.keys())
-        rows = [list(row) for row in result.fetchall()]
-    return columns, rows
+    sql_logger.info(f"EXECUTING SQL:\n{sql}")
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text(sql))
+            columns = list(result.keys())
+            rows = [list(row) for row in result.fetchall()]
+        sql_logger.info(f"SQL SUCCESS | rows_returned={len(rows)} | columns={columns}")
+        return columns, rows
+    except Exception as e:
+        error_logger.exception(f"SQL EXECUTION FAILED:\n{sql}\nError: {e}")
+        raise
 
 
 # ── Endpoint ──────────────────────────────────────────────────
 
 @app.post("/query", response_model=QueryResponse)
 async def query(request: QueryRequest):
-    """
-    Accept a natural language question.
-    Returns: table data (columns + rows) and the best visualization type.
-    """
+    api_logger.info(f"QUERY RECEIVED | question='{request.question}'")
+
     if not request.question.strip():
+        error_logger.warning("Empty question received.")
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
     # Step 1 + 2: orchestrate (KPI selection + SQL refinement)
     try:
         result = orchestrate(request.question)
+        api_logger.info(f"ORCHESTRATION SUCCESS | kpi_set='{result['kpi_set_name']}'")
     except Exception as e:
+        error_logger.exception(f"Orchestration failed for question='{request.question}': {e}")
         raise HTTPException(status_code=500, detail=f"Orchestration failed: {str(e)}")
 
     refined_sql   = result["refined_query"]
@@ -165,6 +187,7 @@ async def query(request: QueryRequest):
     # Guard: make sure we actually got SQL back, not a question or explanation
     first_word = refined_sql.strip().split()[0].upper() if refined_sql.strip() else ""
     if first_word not in ("SELECT", "WITH", "EXEC", "DECLARE"):
+        error_logger.error(f"Invalid SQL returned by orchestration: {refined_sql[:200]}")
         raise HTTPException(
             status_code=500,
             detail=f"Orchestration returned invalid SQL: {refined_sql[:200]}"
@@ -184,10 +207,13 @@ async def query(request: QueryRequest):
             columns=columns,
             rows=rows,
         )
+        api_logger.info(f"VISUALIZATION SELECTED | type='{viz_type}'")
     except Exception:
         # Non-fatal: fall back to table if visualization selection fails
+        error_logger.warning("Visualization selection failed. Falling back to table.")
         viz_type, viz_config = "table", {}
 
+    api_logger.info(f"QUERY COMPLETE | question='{request.question}' | rows={len(rows)} | viz='{viz_type}'")
     return QueryResponse(
         question=request.question,
         kpi_set_id=kpi_set_id,
@@ -204,4 +230,5 @@ async def query(request: QueryRequest):
 
 @app.get("/health")
 async def health():
+    api_logger.info("Health check called.")
     return {"status": "ok"}
